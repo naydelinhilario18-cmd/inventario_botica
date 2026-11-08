@@ -1,0 +1,48 @@
+
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    ports:
+      - "${API_PORT:-3001}:3000"
+    environment:
+      PORT: 3000
+      DB_HOST: database
+      DB_PORT: 3306
+      DB_NAME: nova_salud
+      DB_USER: nova_user
+      DB_PASSWORD: ${MYSQL_PASSWORD:-nova_dev_password}
+      JWT_SECRET: ${JWT_SECRET:-development-only-change-this-secret}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-NovaSalud123!}
+    depends_on:
+      database:
+        condition: service_healthy
+
+  database:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: nova_salud
+      MYSQL_USER: nova_user
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-nova_dev_password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-nova_root_password}
+    ports:
+      - "${MYSQL_PORT:-3307}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  mysql_data:
